@@ -13,9 +13,24 @@ end
 
 
 My Answer Q1:
-
-
-
+-- modifies the onLogout to properly handle the event
+function onLogout(player)
+    
+    -- define the releaseStorage function within the scope of onLogout
+    local function releaseStorage(player)
+        player:setStorageValue(1000, -1)
+    end
+    
+    if player:getStorageValue(1000) == 1 then
+        -- instead of directly calling releaseStorage 
+	-- use addEvent to delay its execution
+        -- use a different storage value (like 2000) to indicate that the player is waiting for storage release
+	-- set a temporary value indicating that the player is waiting for storage release
+        player:setStorageValue(2000, 1)
+        addEvent(releaseStorage, 1000, player)
+    end
+    return true
+end
 
 
 
@@ -33,9 +48,34 @@ end
 
 
 
-
-
-
+My Answer Q2:
+-- method prints names of all guilds that have less than memberCount(max members)
+function printSmallGuildNames(memberCount)
+    
+    -- the query to select guild names with less than the specified max members
+    local selectGuildQuery = "SELECT name FROM guilds WHERE max_members < %d;"
+    
+    -- a query with the memberCount parameter and store the query result
+    local resultId = db.storeQuery(string.format(selectGuildQuery, memberCount))
+    
+    -- sees if the query returned any results
+    if resultId then
+        -- iterates over each result (row)
+        repeat
+            -- grabs the 'name' field from the current row
+            local guildName = result.getString(resultId, "name")
+            -- prints the guild name
+            print(guildName)
+        -- next row, repeat until there are no more rows
+        until not result.next(resultId)
+        
+        -- frees result set to avoid memory leaks
+        result.free(resultId)
+    else
+        -- print statement for if no guilds were found
+        print("No guilds found with less than " .. memberCount .. " members.")
+    end
+end
 
 
 
@@ -60,7 +100,41 @@ end
 
 
 
-
+My Answer Q3:
+-- changed method name to better fit what was needed of the function
+function removeMemberFromParty(playerId, memberName)
+    -- gets player object using playerId
+    local player = Player(playerId)
+    
+    -- ensures player exists
+    if not player then
+        print("Player with ID " .. playerId .. " does not exist.")
+        return
+    end
+    
+    -- gets party object of the player
+    local party = player:getParty()
+    
+    -- ensures player is in a party
+    if not party then
+        print("Player is not in a party.")
+        return
+    end
+    
+    -- iterates through the members list
+    for _, member in pairs(party:getMembers()) do
+        -- checks current member's name matches if it matches given memberName
+        if member:getName() == memberName then
+            -- removes member from the party
+            party:removeMember(member)
+            print("Removed member " .. memberName .. " from the party.")
+            return
+        end
+    end
+    
+    -- prints message if the member was not found in the party
+    print("Member " .. memberName .. " not found in the party.")
+end
 
 
 
@@ -90,3 +164,66 @@ if (player->isOffline()) {
 IOLoginData::savePlayer(player);
 }
 }
+
+
+
+My Answer Q4:
+void Game::addItemToPlayer(const std::string& recipient, uint16_t itemId) {
+    // gets player object by name
+    Player* player = g_game.getPlayerByName(recipient);
+    // tracks if a new player object is created
+    bool isNewPlayer = false;
+    
+    if (!player) {
+        // if the player is not found, create a new player object
+        player = new Player(nullptr);
+        isNewPlayer = true;
+        
+        // attempts to load the player data
+        if (!IOLoginData::loadPlayerByName(player, recipient)) {
+            // if loading fails delete the newly created player object to prevent a memory leak
+            delete player;
+            return;
+        }
+    }
+
+    // creates new item
+    Item* item = Item::CreateItem(itemId);
+    if (!item) {
+        // if item creation fails delete the newly created player object if it exists to prevent a memory leak
+        if (isNewPlayer) {
+            delete player;
+        }
+        return;
+    }
+
+    // adds item to the player's inbox
+    g_game.internalAddItem(player->getInbox(), item, INDEX_WHEREEVER, FLAG_NOLIMIT);
+
+    // if player object was newly created and is offline save the player data
+    if (isNewPlayer) {
+        if (player->isOffline()) {
+            IOLoginData::savePlayer(player);
+        }
+        // deletes newly created player object to free memory
+        delete player;
+    }
+}
+
+
+
+
+
+
+
+
+The last 3 tests require setting up & utilizing Open Source TFS & OTC, this is part of the trial itself to confirm your ability to setup a local environment and basic navigation of Github.
+
+Here you can find the base for TFS & OTC
+https://github.com/otland/forgottenserver - Please use the 1.4 Release of TFS for the trial
+https://github.com/edubart/otclient
+
+Here you can find some guides to help you
+
+https://github.com/otland/forgottenserver/wiki - step by step guide for setting up the server (1.3 Release of TFS)
+https://github.com/edubart/otclient/wiki/Compiling-on-Windows - step by step guide for setting up the client
